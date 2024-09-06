@@ -92,9 +92,9 @@ def upload_files(directory):
 
         if response.status_code == 200:
             uploaded_files.append(response.json())
-            sys.stdout.write(" ✓\n")
+            sys.stdout.write(" [OK]\n")
         else:
-            sys.stdout.write(" ✗\n")
+            sys.stdout.write(" [FAIL]\n")
             print(f"Error uploading {file_name}: {response.text}")
 
         sys.stdout.flush()
