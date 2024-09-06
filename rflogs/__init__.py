@@ -1,0 +1,297 @@
+import argparse
+import configparser
+import gzip
+import os
+import sys
+from urllib.parse import urljoin
+
+import requests
+
+BASE_URL = "https://rflogs.io" #"http://localhost:8000"
+CONFIG_FILE = os.path.expanduser("~/.rflogs_config")
+
+
+def load_config():
+    config = configparser.ConfigParser()
+    config.read(CONFIG_FILE)
+    return config
+
+
+def save_config(config):
+    with open(CONFIG_FILE, "w") as configfile:
+        config.write(configfile)
+
+
+def get_session():
+    config = load_config()
+    session = requests.Session()
+    api_key = config.get("DEFAULT", "API_KEY", fallback=None)
+    if not api_key:
+        raise Exception(
+            "API Key not found. Please run 'rflogs login' to set your API key."
+        )
+    session.headers.update({"X-API-Key": api_key})
+    return session
+
+
+def format_size(size_bytes):
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.2f} KB"
+    else:
+        return f"{size_bytes / (1024 * 1024):.2f} MB"
+
+
+def compress_file(file_path):
+    if (
+        os.path.basename(file_path) == "output.xml"
+        and os.path.getsize(file_path) > 1 * 1024 * 1024
+    ):  # 1MB
+        compressed_path = file_path + ".gz"
+        with open(file_path, "rb") as f_in:
+            with gzip.open(compressed_path, "wb") as f_out:
+                f_out.writelines(f_in)
+        return compressed_path
+    return file_path
+
+
+def upload_files(directory):
+    try:
+        session = get_session()
+    except Exception as e:
+        print(str(e))
+        return
+
+    create_run_url = f"{BASE_URL}/api/runs"
+    response = session.post(create_run_url)
+    if response.status_code != 200:
+        print(f"Error creating run: {response.text}")
+        return
+
+    run_id = response.json()["run_id"]
+    upload_url = f"{BASE_URL}/api/runs/{run_id}/upload"
+    files_to_upload = find_robot_files(directory)
+
+    if not files_to_upload:
+        print(f"No Robot Framework test results found in {directory}")
+        return
+
+    print("Uploading results")
+
+    total_size = 0
+    uploaded_files = []
+
+    for file_path in files_to_upload:
+        file_name = os.path.basename(file_path)
+        original_size = os.path.getsize(file_path)
+
+        sys.stdout.write(f"  {file_name:<12} {format_size(original_size):>8}")
+        sys.stdout.flush()
+
+        file_to_upload = compress_file(file_path)
+        upload_size = os.path.getsize(file_to_upload)
+
+        if file_to_upload.endswith(".gz"):
+            sys.stdout.write(f" - compressed to {format_size(upload_size)}")
+        sys.stdout.flush()
+
+        with open(file_to_upload, "rb") as file:
+            files = {"file": (file_name, file)}
+            response = session.post(upload_url, files=files)
+
+        if response.status_code == 200:
+            uploaded_files.append(response.json())
+            sys.stdout.write(" ✓\n")
+        else:
+            sys.stdout.write(" ✗\n")
+            print(f"Error uploading {file_name}: {response.text}")
+
+        sys.stdout.flush()
+
+        if file_to_upload.endswith(".gz"):
+            os.remove(file_to_upload)
+
+        total_size += upload_size
+
+    if len(uploaded_files) == len(files_to_upload):
+        print(f"\nRun ID: {run_id}")
+        print(f"Files:  {len(uploaded_files)}")
+        print(f"Size:   {format_size(total_size)}")
+        print("\nUploaded files:")
+        for file in uploaded_files:
+            print(f"  {file['file_name']}: {BASE_URL}{file['file_url']}")
+        print("\nNote: You need to be logged in to access these files in your browser.")
+    else:
+        print("\nUpload failed. Some files were not uploaded successfully.")
+
+
+def find_robot_files(directory):
+    robot_files = []
+    for filename in os.listdir(directory):
+        if (
+            filename in ["log.html", "report.html", "output.xml"]
+            or filename.startswith("screenshot")
+            and filename.endswith(".png")
+        ):
+            robot_files.append(os.path.join(directory, filename))
+    return robot_files
+
+
+def get_run_info(run_id):
+    try:
+        session = get_session()
+    except Exception as e:
+        print(str(e))
+        return
+
+    url = f"{BASE_URL}/api/runs/{run_id}"
+    response = session.get(url)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"Failed to retrieve run info: {response.status_code}")
+        print(f"Response content: {response.text}")
+        return None
+
+
+def list_runs():
+    try:
+        session = get_session()
+    except Exception as e:
+        print(str(e))
+        return
+
+    url = f"{BASE_URL}/api/runs"
+    response = session.get(url)
+    if response.status_code == 200:
+        runs = response.json()["runs"]
+        print("Available runs:")
+        for run_id in runs:
+            print(f"  {run_id}")
+    else:
+        print(f"Failed to retrieve runs: {response.status_code}")
+        print(f"Response content: {response.text}")
+
+
+def login(api_key):
+    config = load_config()
+    config["DEFAULT"] = {"API_KEY": api_key}
+    save_config(config)
+    print("API Key saved successfully.")
+
+    # Test the login
+    try:
+        session = requests.Session()
+        session.headers.update({"X-API-Key": api_key})
+        response = session.post(f"{BASE_URL}/api/login")
+        if response.status_code == 200:
+            print("Login successful. You can now use other commands.")
+        else:
+            print(f"Login failed: {response.json().get('detail', 'Unknown error')}")
+    except Exception as e:
+        print(f"Login failed: {str(e)}")
+
+
+def download_files(run_id, output_dir):
+    try:
+        session = get_session()
+    except Exception as e:
+        print(str(e))
+        return
+
+    # Get run information
+    run_info_url = urljoin(BASE_URL, f"/api/runs/{run_id}")
+    response = session.get(run_info_url)
+    if response.status_code != 200:
+        print(f"Failed to retrieve run info: {response.status_code}")
+        print(f"Response content: {response.text}")
+        return
+
+    run_info = response.json()
+    files = run_info.get("files", [])
+
+    for file in files:
+        file_id = file["id"]
+        file_name = file["name"]
+        file_url = urljoin(BASE_URL, f"/api/files/{run_id}/{file_id}_{file_name}")
+
+        response = session.get(file_url)
+        if response.status_code == 200:
+            file_path = os.path.join(output_dir, file_name)
+            with open(file_path, "wb") as f:
+                f.write(response.content)
+            print(f"Downloaded {file_name}")
+        else:
+            print(f"Failed to download {file_name}: {response.status_code}")
+            print(f"Response content: {response.text}")
+
+
+def delete_run(run_id):
+    try:
+        session = get_session()
+    except Exception as e:
+        print(str(e))
+        return
+
+    delete_url = f"{BASE_URL}/api/runs/{run_id}"
+    response = session.delete(delete_url)
+
+    if response.status_code == 200:
+        print(f"Run {run_id} deleted successfully.")
+    elif response.status_code == 404:
+        print(f"Run {run_id} not found or you are not authorized to delete it.")
+    else:
+        print(f"Failed to delete run {run_id}: {response.status_code}")
+        print(f"Response content: {response.text}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="RF Logs CLI")
+    subparsers = parser.add_subparsers(dest="action", required=True)
+
+    upload_parser = subparsers.add_parser("upload", help="Upload test results")
+    upload_parser.add_argument(
+        "directory", nargs="?", default=".", help="Directory containing test results"
+    )
+
+    info_parser = subparsers.add_parser("info", help="Get run information")
+    info_parser.add_argument("run_id", help="Run ID to get information for")
+
+    download_parser = subparsers.add_parser("download", help="Download test results")
+    download_parser.add_argument("run_id", help="Run ID to download")
+    download_parser.add_argument(
+        "--output-dir", default=".", help="Directory to save downloaded files"
+    )
+
+    delete_parser = subparsers.add_parser("delete", help="Delete a specific run")
+    delete_parser.add_argument("run_id", help="Run ID to delete")
+
+    login_parser = subparsers.add_parser("login", help="Save API Key")
+    login_parser.add_argument("api_key", help="Your API Key")
+
+    subparsers.add_parser("list", help="List available runs")
+
+    args = parser.parse_args()
+
+    if args.action == "upload":
+        upload_files(args.directory)
+    elif args.action == "info":
+        info = get_run_info(args.run_id)
+        if info:
+            print(f"Run ID: {args.run_id}")
+            print(f"Files: {len(info['files'])}")
+            for file in info["files"]:
+                print(f"  - {file['name']} (ID: {file['id']})")
+    elif args.action == "download":
+        download_files(args.run_id, args.output_dir)
+    elif args.action == "login":
+        login(args.api_key)
+    elif args.action == "list":
+        list_runs()
+    elif args.action == "delete":
+        delete_run(args.run_id)
+
+
+if __name__ == "__main__":
+    main()
