@@ -20,13 +20,13 @@ pip install rflogs
 
 ### Authentication
 
-Authenticate with the RF Logs service:
+`rflogs` uses an API key for authentication. Set your RF Logs API key as an environment variable:
 
 ```bash
-rflogs login
+export RFLOGS_API_KEY=your_api_key_here
 ```
 
-This opens your default web browser to complete the authentication process. Once authenticated, a token is stored securely on your machine for future use.
+You can add this line to your shell configuration file (e.g., `.bashrc`, `.zshrc`) to make it permanent.
 
 ### Uploading Test Results
 
@@ -77,13 +77,10 @@ Example output:
 
 ```
 $ rflogs list
-Recent uploads:
-1. Run ID: 1234abcd - Uploaded on 2023-06-15 14:30:00 UTC
-   https://rflogs.io/runs/1234abcd
-2. Run ID: 5678efgh - Uploaded on 2023-06-14 09:15:00 UTC
-   https://rflogs.io/runs/5678efgh
-3. Run ID: 90ijklmn - Uploaded on 2023-06-13 16:45:00 UTC
-   https://rflogs.io/runs/90ijklmn
+Available runs:
+  1234abcd
+  5678efgh
+  90ijklmn
 
 To view details of a specific run, use: rflogs info <run_id>
 ```
@@ -101,22 +98,12 @@ Example output:
 ```
 $ rflogs info 1234abcd
 Run ID: 1234abcd
-Uploaded on: 2023-06-15 14:30:00 UTC
-Files:
-  - log.html    (size: 256 KB)
-  - report.html (size: 128 KB)
-  - output.xml  (size: 1.2 MB)
-  - screenshot1.png (size: 45 KB)
-  - screenshot2.png (size: 52 KB)
-Links:
-  - Overview: https://rflogs.io/runs/1234abcd
-  - Log:      https://rflogs.io/runs/1234abcd/log.html
-  - Report:   https://rflogs.io/runs/1234abcd/report.html
-Test Summary:
-  - Total Tests: 50
-  - Passed: 48
-  - Failed: 2
-  - Skipped: 0
+Files: 5
+  - log.html (ID: 1)
+  - report.html (ID: 2)
+  - output.xml (ID: 3)
+  - screenshot1.png (ID: 4)
+  - screenshot2.png (ID: 5)
 ```
 
 ### Downloading Test Results
@@ -133,14 +120,13 @@ Example output:
 
 ```
 $ rflogs download 1234abcd
-Downloading files for run ID 1234abcd...
-  - Downloading log.html...    Done
-  - Downloading report.html... Done
-  - Downloading output.xml...  Done
-  - Downloading screenshot1.png... Done
-  - Downloading screenshot2.png... Done
-All files downloaded successfully to ./rflogs_1234abcd/
+Downloaded log.html
+Downloaded report.html
+Downloaded output.xml
+Downloaded screenshot1.png
+Downloaded screenshot2.png
 ```
+
 ### Deleting a Test Run
 
 To delete a specific run:
@@ -151,10 +137,6 @@ rflogs delete <run_id>
 
 This command will immediately delete the specified run and its associated files from the server.
 
-## Configuration
-
-`rflogs` uses a configuration file located at `~/.config/rflogs/config.ini`. You can edit this file to change default behaviors or set environment-specific options.
-
 ## Integration with CI/CD Systems
 
 ### GitHub Actions
@@ -164,59 +146,18 @@ To integrate `rflogs` with GitHub Actions, add the following step to your workfl
 ```yaml
 - name: Upload Robot Framework results
   env:
-    RFLOGS_TOKEN: ${{ secrets.RFLOGS_TOKEN }}
+    RFLOGS_API_KEY: ${{ secrets.RFLOGS_API_KEY }}
   run: |
     pipx install rflogs
-    echo "Uploading Robot Framework test results..."
-    output=$(rflogs upload ./results)
-    echo "$output"
-    echo "$output" >> $GITHUB_OUTPUT
+    rflogs upload ./results
 ```
 
-Make sure to set the `RFLOGS_TOKEN` secret in your GitHub repository settings.
-
-The `rflogs upload` command, when run in a CI environment, produces a simplified output optimized for GitHub Actions:
-
-```
-RFLOGS_RUN_ID=1234abcd
-RFLOGS_OVERVIEW=https://rflogs.io/runs/1234abcd
-RFLOGS_LOG=https://rflogs.io/runs/1234abcd/log.html
-RFLOGS_REPORT=https://rflogs.io/runs/1234abcd/report.html
-```
-
-You can then use these outputs in subsequent steps of your workflow, for example:
-
-```yaml
-- name: Create workflow summary
-  run: |
-    echo "## RF Logs Test Results" >> $GITHUB_STEP_SUMMARY
-    echo "✅ [Results Overview](${{ steps.upload.outputs.RFLOGS_OVERVIEW }})" >> $GITHUB_STEP_SUMMARY
-    echo "📄 [Log](${{ steps.upload.outputs.RFLOGS_LOG }})" >> $GITHUB_STEP_SUMMARY
-    echo "📊 [Report](${{ steps.upload.outputs.RFLOGS_REPORT }})" >> $GITHUB_STEP_SUMMARY
-
-- name: Post links to PR comment
-  if: github.event_name == 'pull_request'
-  uses: actions/github-script@v6
-  with:
-    github-token: ${{secrets.GITHUB_TOKEN}}
-    script: |
-      github.rest.issues.createComment({
-        issue_number: context.issue.number,
-        owner: context.repo.owner,
-        repo: context.repo.name,
-        body: `## RF Logs Test Results for this PR
-        - [Results Overview](${process.env.RFLOGS_OVERVIEW})
-        - [Log](${process.env.RFLOGS_LOG})
-        - [Report](${process.env.RFLOGS_REPORT})`
-      })
-```
+Make sure to set the `RFLOGS_API_KEY` secret in your GitHub repository settings.
 
 ### Other CI/CD Systems
 
 For other CI/CD systems:
 
 1. Install the RF Logs CLI tool in your CI environment
-2. Set the `RFLOGS_TOKEN` environment variable
+2. Set the `RFLOGS_API_KEY` environment variable
 3. Run `rflogs upload` with the appropriate output directory
-
-For more information about the RF Logs project, please refer to the [main README](../README.md).

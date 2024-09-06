@@ -1,38 +1,29 @@
 import argparse
-import configparser
-import gzip
 import os
 import sys
 from urllib.parse import urljoin
+from importlib.metadata import version, PackageNotFoundError
 
 import requests
 
-BASE_URL = "https://rflogs.io" #"http://localhost:8000"
-CONFIG_FILE = os.path.expanduser("~/.rflogs_config")
+try:
+    __version__ = version("rflogs")
+except PackageNotFoundError:
+    # package is not installed
+    __version__ = "unknown"
 
-
-def load_config():
-    config = configparser.ConfigParser()
-    config.read(CONFIG_FILE)
-    return config
-
-
-def save_config(config):
-    with open(CONFIG_FILE, "w") as configfile:
-        config.write(configfile)
-
+BASE_URL = "https://rflogs.io"
 
 def get_session():
-    config = load_config()
-    session = requests.Session()
-    api_key = config.get("DEFAULT", "API_KEY", fallback=None)
+    api_key = os.environ.get("RFLOGS_API_KEY")
     if not api_key:
         raise Exception(
-            "API Key not found. Please run 'rflogs login' to set your API key."
+            "RFLOGS_API_KEY environment variable not set. "
+            "Please set it to your RF Logs API key before running the command."
         )
+    session = requests.Session()
     session.headers.update({"X-API-Key": api_key})
     return session
-
 
 def format_size(size_bytes):
     if size_bytes < 1024:
@@ -41,7 +32,6 @@ def format_size(size_bytes):
         return f"{size_bytes / 1024:.2f} KB"
     else:
         return f"{size_bytes / (1024 * 1024):.2f} MB"
-
 
 def compress_file(file_path):
     if (
@@ -54,7 +44,6 @@ def compress_file(file_path):
                 f_out.writelines(f_in)
         return compressed_path
     return file_path
-
 
 def upload_files(directory):
     try:
@@ -125,7 +114,6 @@ def upload_files(directory):
     else:
         print("\nUpload failed. Some files were not uploaded successfully.")
 
-
 def find_robot_files(directory):
     robot_files = []
     for filename in os.listdir(directory):
@@ -136,7 +124,6 @@ def find_robot_files(directory):
         ):
             robot_files.append(os.path.join(directory, filename))
     return robot_files
-
 
 def get_run_info(run_id):
     try:
@@ -153,7 +140,6 @@ def get_run_info(run_id):
         print(f"Failed to retrieve run info: {response.status_code}")
         print(f"Response content: {response.text}")
         return None
-
 
 def list_runs():
     try:
@@ -172,26 +158,6 @@ def list_runs():
     else:
         print(f"Failed to retrieve runs: {response.status_code}")
         print(f"Response content: {response.text}")
-
-
-def login(api_key):
-    config = load_config()
-    config["DEFAULT"] = {"API_KEY": api_key}
-    save_config(config)
-    print("API Key saved successfully.")
-
-    # Test the login
-    try:
-        session = requests.Session()
-        session.headers.update({"X-API-Key": api_key})
-        response = session.post(f"{BASE_URL}/api/login")
-        if response.status_code == 200:
-            print("Login successful. You can now use other commands.")
-        else:
-            print(f"Login failed: {response.json().get('detail', 'Unknown error')}")
-    except Exception as e:
-        print(f"Login failed: {str(e)}")
-
 
 def download_files(run_id, output_dir):
     try:
@@ -226,7 +192,6 @@ def download_files(run_id, output_dir):
             print(f"Failed to download {file_name}: {response.status_code}")
             print(f"Response content: {response.text}")
 
-
 def delete_run(run_id):
     try:
         session = get_session()
@@ -245,32 +210,32 @@ def delete_run(run_id):
         print(f"Failed to delete run {run_id}: {response.status_code}")
         print(f"Response content: {response.text}")
 
-
 def main():
-    parser = argparse.ArgumentParser(description="RF Logs CLI")
+    parser = argparse.ArgumentParser(
+        description=f"RF Logs CLI v{__version__} - A tool for managing Robot Framework test results with rflogs.io",
+        epilog="For more information, visit https://rflogs.io"
+    )
+    parser.add_argument('-v', '--version', action='version', version=f'%(prog)s {__version__}')
     subparsers = parser.add_subparsers(dest="action", required=True)
 
-    upload_parser = subparsers.add_parser("upload", help="Upload test results")
+    upload_parser = subparsers.add_parser("upload", help="Upload test results to rflogs.io")
     upload_parser.add_argument(
         "directory", nargs="?", default=".", help="Directory containing test results"
     )
 
-    info_parser = subparsers.add_parser("info", help="Get run information")
+    info_parser = subparsers.add_parser("info", help="Get run information from rflogs.io")
     info_parser.add_argument("run_id", help="Run ID to get information for")
 
-    download_parser = subparsers.add_parser("download", help="Download test results")
+    download_parser = subparsers.add_parser("download", help="Download test results from rflogs.io")
     download_parser.add_argument("run_id", help="Run ID to download")
     download_parser.add_argument(
         "--output-dir", default=".", help="Directory to save downloaded files"
     )
 
-    delete_parser = subparsers.add_parser("delete", help="Delete a specific run")
+    delete_parser = subparsers.add_parser("delete", help="Delete a specific run from rflogs.io")
     delete_parser.add_argument("run_id", help="Run ID to delete")
 
-    login_parser = subparsers.add_parser("login", help="Save API Key")
-    login_parser.add_argument("api_key", help="Your API Key")
-
-    subparsers.add_parser("list", help="List available runs")
+    subparsers.add_parser("list", help="List available runs on rflogs.io")
 
     args = parser.parse_args()
 
@@ -281,17 +246,14 @@ def main():
         if info:
             print(f"Run ID: {args.run_id}")
             print(f"Files: {len(info['files'])}")
-            for file in info["files"]:
+            for file in info['files']:
                 print(f"  - {file['name']} (ID: {file['id']})")
     elif args.action == "download":
         download_files(args.run_id, args.output_dir)
-    elif args.action == "login":
-        login(args.api_key)
     elif args.action == "list":
         list_runs()
     elif args.action == "delete":
         delete_run(args.run_id)
-
 
 if __name__ == "__main__":
     main()
