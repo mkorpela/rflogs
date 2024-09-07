@@ -13,7 +13,8 @@ except PackageNotFoundError:
     # package is not installed
     __version__ = "unknown"
 
-BASE_URL = "https://rflogs.io"
+# Use environment variable to override base URL, defaulting to production
+BASE_URL = os.environ.get("RFLOGS_BASE_URL", "https://rflogs.io")
 
 def get_session():
     api_key = os.environ.get("RFLOGS_API_KEY")
