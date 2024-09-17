@@ -113,9 +113,19 @@ def upload_files(directory):
         print(f"\nRun ID: {run_id}")
         print(f"Files:  {len(uploaded_files)}")
         print(f"Size:   {format_size(total_size)}")
+        # Display links only for key files
+        key_files = ["log.html", "report.html", "output.xml"]
+        key_uploaded_files = [
+            file for file in uploaded_files if os.path.basename(file['file_name']) in key_files
+        ]
+
         print("\nUploaded files:")
-        for file in uploaded_files:
+        for file in key_uploaded_files:
             print(f"  {file['file_name']}: {BASE_URL}{file['file_url']}")
+
+        if len(uploaded_files) > len(key_uploaded_files):
+            print(f"\nAdditional {len(uploaded_files) - len(key_uploaded_files)} files were uploaded.")
+
         print("\nNote: You need to be logged in to access these files in your browser.")
     else:
         print("\nUpload failed. Some files were not uploaded successfully.")
