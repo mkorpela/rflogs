@@ -182,7 +182,7 @@ def download_files(run_id, output_dir):
     for file in files:
         file_name = file["name"]
         file_path = file["path"]
-        file_url = urljoin(BASE_URL, f"/api/files/{run_id}/{file_path}")
+        file_url = urljoin(BASE_URL, f"/api/files/{file_path}")
 
         response = session.get(file_url)
         if response.status_code == 200:
