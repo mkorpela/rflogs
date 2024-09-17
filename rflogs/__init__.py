@@ -76,10 +76,11 @@ def upload_files(directory):
     uploaded_files = []
 
     for file_path in files_to_upload:
-        file_name = os.path.basename(file_path)
+        # Get the relative file path from the base directory, preserving subdirectories
+        file_name = os.path.relpath(file_path, start=directory)
         original_size = os.path.getsize(file_path)
 
-        sys.stdout.write(f"  {file_name:<12} {format_size(original_size):>8}")
+        sys.stdout.write(f"  {file_name:<40} {format_size(original_size):>8}")
         sys.stdout.flush()
 
         file_to_upload = compress_file(file_path)
@@ -87,9 +88,10 @@ def upload_files(directory):
 
         if file_to_upload.endswith(".gz"):
             sys.stdout.write(f" - compressed to {format_size(upload_size)}")
-        sys.stdout.flush()
+            sys.stdout.flush()
 
         with open(file_to_upload, "rb") as file:
+            # Send the file_name including subdirectory structure
             files = {"file": (file_name, file)}
             response = session.post(upload_url, files=files)
 
