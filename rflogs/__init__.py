@@ -1,7 +1,9 @@
 import argparse
 import gzip
+from html.parser import HTMLParser
 import os
 import sys
+import xml.etree.ElementTree as ET
 from urllib.parse import urljoin
 from importlib.metadata import version, PackageNotFoundError
 
@@ -118,14 +120,60 @@ def upload_files(directory):
 
 def find_robot_files(directory):
     robot_files = []
+    standard_files = ["log.html", "report.html", "output.xml"]
     for filename in os.listdir(directory):
-        if (
-            filename in ["log.html", "report.html", "output.xml"]
-            or filename.startswith("screenshot")
-            and filename.endswith(".png")
-        ):
+        if filename in standard_files:
             robot_files.append(os.path.join(directory, filename))
+
+    # Parse output.xml to find additional files
+    output_xml_path = os.path.join(directory, "output.xml")
+
+    additional_files = set()
+    if os.path.exists(output_xml_path):
+        additional_files.update(parse_output_xml(output_xml_path, directory))
+
+    robot_files.extend(list(additional_files))
     return robot_files
+
+class MsgHTMLParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.file_paths = []
+
+    def handle_starttag(self, tag, attrs):
+        for attr_name, attr_value in attrs:
+            if attr_name in ["src", "href"]:
+                self.file_paths.append(attr_value)
+
+def parse_output_xml(output_xml_path, base_directory):
+    # Efficiently parse output.xml
+    additional_files = set()
+    base_directory = os.path.abspath(base_directory)  # Get absolute path of base directory
+
+    context = ET.iterparse(output_xml_path, events=("end",))
+    for event, elem in context:
+        if elem.tag == "msg" and elem.get("html") == "true":
+            html_content = elem.text or ""
+            parser = MsgHTMLParser()
+            parser.feed(html_content)
+            for file_path in parser.file_paths:
+                # Resolve the file path relative to base_directory
+                resolved_path = os.path.join(base_directory, file_path)
+                # Normalize the path to handle any .. or .
+                resolved_path = os.path.normpath(resolved_path)
+                # Get absolute path
+                resolved_path = os.path.abspath(resolved_path)
+                # Check if the resolved path is within the base_directory
+                if os.path.commonprefix([resolved_path, base_directory]) == base_directory:
+                    # Check if the file exists
+                    if os.path.isfile(resolved_path):
+                        additional_files.add(resolved_path)
+                else:
+                    # The file is outside the base_directory; ignore it
+                    pass
+        # Clear the element to free memory
+        elem.clear()
+    return additional_files
 
 def get_run_info(run_id):
     try:
