@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rflogs"
-version = "0.10.0"
+version = "0.11.0"
 description = "A CLI tool for uploading Robot Framework test results to rflogs.io"
 authors = ["Mikko Korpela <mikko.korpela@gmail.com>"]
 license = "Apache-2.0"
