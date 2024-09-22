@@ -118,9 +118,6 @@ def upload_files(directory):
         is_github_actions = os.environ.get("GITHUB_ACTIONS", "false") == "true"
         github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
 
-        # Get the job name
-        job_name = os.environ.get("GITHUB_JOB", None)
-
         # Prepare links to uploaded files
         file_links = {}
         for file in uploaded_files:
@@ -143,20 +140,18 @@ def upload_files(directory):
         if is_github_actions and github_step_summary:
             # Write to GitHub Actions summary
             with open(github_step_summary, "a") as summary_file:
-                # Append to the RF Logs Test Results section
-                if job_name:
-                    summary_file.write(f"\n### {job_name}\n\n")
-                else:
-                    summary_file.write(f"\n### Test Results\n\n")
-                if 'log.html' in file_links or 'report.html' in file_links:
-                    summary_file.write("Results:\n\n")
-                    if 'log.html' in file_links:
-                        summary_file.write(f"- [Log]({file_links['log.html']})\n")
-                    if 'report.html' in file_links:
-                        summary_file.write(f"- [Report]({file_links['report.html']})\n")
-                else:
-                    # Fallback to run URL if specific files are not available
-                    summary_file.write(f"- [Results]({run_url})\n")
+                # Build the list of available links
+                links = []
+                if 'log.html' in file_links:
+                    links.append(f"[Log]({file_links['log.html']})")
+                if 'report.html' in file_links:
+                    links.append(f"[Report]({file_links['report.html']})")
+                if not links:
+                    # Neither Log nor Report is available; provide Run link
+                    links.append(f"[Results]({run_url})")
+
+                # Write the links on the same line
+                summary_file.write(' '.join(links) + '\n')
             print("\nUploaded results have been added to the GitHub Actions summary.")
         else:
             # Default console output already printed above
