@@ -153,10 +153,6 @@ def upload_files(directory):
                 # Write the links on the same line
                 summary_file.write(' '.join(links) + '\n')
             print("\nUploaded results have been added to the GitHub Actions summary.")
-        else:
-            # Default console output already printed above
-            pass
-
     else:
         print("\nUpload failed. Some files were not uploaded successfully.")
 
