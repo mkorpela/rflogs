@@ -119,7 +119,7 @@ def upload_files(directory):
         github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
 
         # Get the job name
-        job_name = os.environ.get("GITHUB_JOB", "Unknown Job")
+        job_name = os.environ.get("GITHUB_JOB", None)
 
         # Prepare links to uploaded files
         file_links = {}
@@ -128,20 +128,26 @@ def upload_files(directory):
             file_url = f"{BASE_URL}{file['file_url']}"
             file_links[filename] = file_url
 
-        # Always output the link and job name in the terminal
-        print(f"\nJob '{job_name}' results:")
+        # Prepare the run URL
+        run_url = f"{BASE_URL}/run-details.html?runId={run_id}"
+
+        # Prepare terminal output
+        print("\nResults:")
         if 'log.html' in file_links:
             print(f"  Log:    {file_links['log.html']}")
         if 'report.html' in file_links:
             print(f"  Report: {file_links['report.html']}")
-        print(f"  Run ID: {run_id}")
+        print(f"  Run:    {run_url}")
 
         # Output links differently based on environment
         if is_github_actions and github_step_summary:
             # Write to GitHub Actions summary
             with open(github_step_summary, "a") as summary_file:
                 # Append to the RF Logs Test Results section
-                summary_file.write(f"\n### {job_name}\n\n")
+                if job_name:
+                    summary_file.write(f"\n### {job_name}\n\n")
+                else:
+                    summary_file.write(f"\n### Test Results\n\n")
                 if 'log.html' in file_links or 'report.html' in file_links:
                     summary_file.write("Results:\n\n")
                     if 'log.html' in file_links:
@@ -150,12 +156,11 @@ def upload_files(directory):
                         summary_file.write(f"- [Report]({file_links['report.html']})\n")
                 else:
                     # Fallback to run URL if specific files are not available
-                    run_url = f"{BASE_URL}/runs/{run_id}"
                     summary_file.write(f"- [Results]({run_url})\n")
-            print(f"\nUploaded results for job '{job_name}' have been added to the GitHub Actions summary.")
+            print("\nUploaded results have been added to the GitHub Actions summary.")
         else:
-            # Default console output
-            pass  # Already printed above
+            # Default console output already printed above
+            pass
 
     else:
         print("\nUpload failed. Some files were not uploaded successfully.")
