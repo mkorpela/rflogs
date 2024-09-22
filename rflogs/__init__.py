@@ -113,20 +113,50 @@ def upload_files(directory):
         print(f"\nRun ID: {run_id}")
         print(f"Files:  {len(uploaded_files)}")
         print(f"Size:   {format_size(total_size)}")
-        # Display links only for key files
-        key_files = ["log.html", "report.html", "output.xml"]
-        key_uploaded_files = [
-            file for file in uploaded_files if os.path.basename(file['file_name']) in key_files
-        ]
 
-        print("\nUploaded files:")
-        for file in key_uploaded_files:
-            print(f"  {file['file_name']}: {BASE_URL}{file['file_url']}")
+        # Detect if running in GitHub Actions
+        is_github_actions = os.environ.get("GITHUB_ACTIONS", "false") == "true"
+        github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
 
-        if len(uploaded_files) > len(key_uploaded_files):
-            print(f"\nAdditional {len(uploaded_files) - len(key_uploaded_files)} files were uploaded.")
+        # Get the job name
+        job_name = os.environ.get("GITHUB_JOB", "Unknown Job")
 
-        print("\nNote: You need to be logged in to access these files in your browser.")
+        # Prepare links to uploaded files
+        file_links = {}
+        for file in uploaded_files:
+            filename = os.path.basename(file['file_name'])
+            file_url = f"{BASE_URL}{file['file_url']}"
+            file_links[filename] = file_url
+
+        # Always output the link and job name in the terminal
+        print(f"\nJob '{job_name}' results:")
+        if 'log.html' in file_links:
+            print(f"  Log:    {file_links['log.html']}")
+        if 'report.html' in file_links:
+            print(f"  Report: {file_links['report.html']}")
+        print(f"  Run ID: {run_id}")
+
+        # Output links differently based on environment
+        if is_github_actions and github_step_summary:
+            # Write to GitHub Actions summary
+            with open(github_step_summary, "a") as summary_file:
+                # Append to the RF Logs Test Results section
+                summary_file.write(f"\n### {job_name}\n\n")
+                if 'log.html' in file_links or 'report.html' in file_links:
+                    summary_file.write("Results:\n\n")
+                    if 'log.html' in file_links:
+                        summary_file.write(f"- [Log]({file_links['log.html']})\n")
+                    if 'report.html' in file_links:
+                        summary_file.write(f"- [Report]({file_links['report.html']})\n")
+                else:
+                    # Fallback to run URL if specific files are not available
+                    run_url = f"{BASE_URL}/runs/{run_id}"
+                    summary_file.write(f"- [Results]({run_url})\n")
+            print(f"\nUploaded results for job '{job_name}' have been added to the GitHub Actions summary.")
+        else:
+            # Default console output
+            pass  # Already printed above
+
     else:
         print("\nUpload failed. Some files were not uploaded successfully.")
 
