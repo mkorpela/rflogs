@@ -55,9 +55,18 @@ def upload_files(directory):
     except Exception as e:
         print(str(e))
         return
+    
+    # Placeholder run data
+    run_data = {
+        "total_tests": None,
+        "passed": None,
+        "failed": None,
+        "skipped": None,
+        "verdict": None,
+    }
 
     create_run_url = f"{BASE_URL}/api/runs"
-    response = session.post(create_run_url)
+    response = session.post(create_run_url, json=run_data)
     if response.status_code != 200:
         print(f"Error creating run: {response.text}")
         return
@@ -74,6 +83,7 @@ def upload_files(directory):
 
     total_size = 0
     uploaded_files = []
+    html_files = []
 
     for file_path in files_to_upload:
         # Get the relative file path from the base directory, preserving subdirectories
@@ -96,8 +106,15 @@ def upload_files(directory):
             response = session.post(upload_url, files=files)
 
         if response.status_code == 200:
-            uploaded_files.append(response.json())
+            upload_response = response.json()
+            uploaded_files.append(upload_response)
             sys.stdout.write(" [OK]\n")
+
+            if file_name.lower().endswith(".html"):
+                html_files.append({
+                    "label": os.path.basename(file_name).capitalize()[:-5],
+                    "url": f"{BASE_URL}{upload_response['file_url']}"
+                })
         else:
             sys.stdout.write(" [FAIL]\n")
             print(f"Error uploading {file_name}: {response.text}")
@@ -118,36 +135,25 @@ def upload_files(directory):
         is_github_actions = os.environ.get("GITHUB_ACTIONS", "false") == "true"
         github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
 
-        # Prepare links to uploaded files
-        file_links = {}
-        for file in uploaded_files:
-            filename = os.path.basename(file['file_name'])
-            file_url = f"{BASE_URL}{file['file_url']}"
-            file_links[filename] = file_url
-
         # Prepare the run URL
         run_url = f"{BASE_URL}/run-details.html?runId={run_id}"
 
-        # Prepare terminal output
-        print("\nResults:")
-        if 'log.html' in file_links:
-            print(f"  Log:    {file_links['log.html']}")
-        if 'report.html' in file_links:
-            print(f"  Report: {file_links['report.html']}")
-        print(f"  Run:    {run_url}")
+        if html_files:
+            print("\nHTML Files:")
+            for html_file in html_files:
+                label = html_file['label']+":"
+                url = html_file['url']
+                print(f"  {label:<10} {url}")
+        print(f"  Run:       {run_url}")
 
         # Output links differently based on environment
         if is_github_actions and github_step_summary:
             # Write to GitHub Actions summary
             with open(github_step_summary, "a") as summary_file:
                 # Build the list of available links
-                links = []
-                if 'log.html' in file_links:
-                    links.append(f"[Log]({file_links['log.html']})")
-                if 'report.html' in file_links:
-                    links.append(f"[Report]({file_links['report.html']})")
+                links = [f"[{html_file['label']}]({html_file['url']})" for html_file in html_files]
                 if not links:
-                    # Neither Log nor Report is available; provide Run link
+                    # No HTML files; provide Run link
                     links.append(f"[Results]({run_url})")
 
                 # Write the links on the same line
