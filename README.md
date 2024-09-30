@@ -28,6 +28,43 @@ export RFLOGS_API_KEY=your_api_key_here
 
 You can add this line to your shell configuration file (e.g., `.bashrc`, `.zshrc`) to make it permanent.
 
+## Tagging Runs
+
+You can associate tags with your test runs to categorize and filter them. Tags can be specified using the `--tag` or `-t` option when uploading results.
+
+### Tag Format
+
+- **Key-Value Tags:** `key:value`
+- **Simple Tags:** `tag`
+
+### Constraints
+
+- **Tag Keys:**
+
+  - **Must start with a letter (a-z, A-Z).**
+  - **Length:** 1 to 50 characters.
+  - **Allowed Characters:** Letters, numbers, underscores (`_`), hyphens (`-`), dots (`.`).
+  - **Case-Insensitive:** `Env` and `env` are considered the same key.
+
+- **Tag Values:**
+
+  - **Length:** 1 to 100 characters.
+  - **Allowed Characters:** Letters, numbers, spaces, underscores (`_`), hyphens (`-`), dots (`.`), slashes (`/`).
+  - **Case-Sensitive.**
+
+### Examples
+
+```bash
+# Valid Tags
+rflogs upload -t env:production -t browser:chrome -t regression
+
+# Invalid Tag Key (starts with a number)
+rflogs upload -t 1env:production  # Will produce an error
+
+# Invalid Tag Value (contains invalid character '@')
+rflogs upload -t env:prod@ction  # Will produce an error
+```
+
 ### Uploading Test Results
 
 Upload test results after running your Robot Framework tests:

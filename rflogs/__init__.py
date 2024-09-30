@@ -2,6 +2,7 @@ import argparse
 import gzip
 from html.parser import HTMLParser
 import os
+import re
 import sys
 import xml.etree.ElementTree as ET
 from urllib.parse import urljoin
@@ -17,6 +18,8 @@ except PackageNotFoundError:
 
 # Use environment variable to override base URL, defaulting to production
 BASE_URL = os.environ.get("RFLOGS_BASE_URL", "https://rflogs.io")
+TAG_KEY_PATTERN = re.compile(r'^[a-zA-Z][a-zA-Z0-9_.-]{0,49}$')
+TAG_VALUE_PATTERN = re.compile(r'^[a-zA-Z0-9_.\-/\s]{1,100}$')
 
 def get_session():
     api_key = os.environ.get("RFLOGS_API_KEY")
@@ -49,13 +52,37 @@ def compress_file(file_path):
         return compressed_path
     return file_path
 
-def upload_files(directory):
+def upload_files(directory, tags=None):
     try:
         session = get_session()
     except Exception as e:
         print(str(e))
         return
     
+    # Validate and process tags
+    processed_tags = []
+    if tags:
+        for tag_str in tags:
+            if ':' in tag_str:
+                key, value = tag_str.split(':', 1)
+            else:
+                key = tag_str
+                value = 'true'
+            key = key.strip()
+            value = value.strip()
+
+            # Validate tag key
+            if not TAG_KEY_PATTERN.fullmatch(key):
+                print(f"Invalid tag key '{key}'. Must start with a letter, and be 1-50 characters long. Allowed characters: letters, numbers, '_', '-', '.'")
+                continue
+
+            # Validate tag value
+            if not TAG_VALUE_PATTERN.fullmatch(value):
+                print(f"Invalid tag value '{value}'. Must be 1-100 characters long. Allowed characters: letters, numbers, spaces, '_', '-', '.', '/'")
+                continue
+
+            processed_tags.append(f"{key}:{value}")
+
     # Placeholder run data
     run_data = {
         "total_tests": None,
@@ -63,6 +90,7 @@ def upload_files(directory):
         "failed": None,
         "skipped": None,
         "verdict": None,
+        "tags": processed_tags,
     }
 
     create_run_url = f"{BASE_URL}/api/runs"
@@ -314,6 +342,9 @@ def main():
 
     upload_parser = subparsers.add_parser("upload", help="Upload test results to rflogs.io")
     upload_parser.add_argument(
+        "-t", "--tag", action="append", help="Tag(s) to associate with the run, e.g., -t env:windows -t regression"
+    )
+    upload_parser.add_argument(
         "directory", nargs="?", default=".", help="Directory containing test results"
     )
 
@@ -334,7 +365,7 @@ def main():
     args = parser.parse_args()
 
     if args.action == "upload":
-        upload_files(args.directory)
+        upload_files(args.directory, tags=args.tag)
     elif args.action == "info":
         info = get_run_info(args.run_id)
         if info:
