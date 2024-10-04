@@ -4,6 +4,7 @@ from html.parser import HTMLParser
 import os
 import re
 import sys
+from typing import Any, Dict, List, Set, Tuple
 import xml.etree.ElementTree as ET
 from urllib.parse import urljoin
 from importlib.metadata import version, PackageNotFoundError
@@ -18,8 +19,9 @@ except PackageNotFoundError:
 
 # Use environment variable to override base URL, defaulting to production
 BASE_URL = os.environ.get("RFLOGS_BASE_URL", "https://rflogs.io")
-TAG_KEY_PATTERN = re.compile(r'^[a-zA-Z][a-zA-Z0-9_.-]{0,49}$')
-TAG_VALUE_PATTERN = re.compile(r'^[a-zA-Z0-9_.\-/\s]{1,100}$')
+TAG_KEY_PATTERN = re.compile(r"^[a-zA-Z][a-zA-Z0-9_.-]{0,49}$")
+TAG_VALUE_PATTERN = re.compile(r"^[a-zA-Z0-9_.\-/\s]{1,100}$")
+
 
 def get_session():
     api_key = os.environ.get("RFLOGS_API_KEY")
@@ -32,6 +34,7 @@ def get_session():
     session.headers.update({"X-API-Key": api_key})
     return session
 
+
 def format_size(size_bytes):
     if size_bytes < 1024:
         return f"{size_bytes} B"
@@ -40,7 +43,8 @@ def format_size(size_bytes):
     else:
         return f"{size_bytes / (1024 * 1024):.2f} MB"
 
-def compress_file(file_path):
+
+def compress_file(file_path: str) -> str:
     if (
         os.path.basename(file_path) == "output.xml"
         and os.path.getsize(file_path) > 1 * 1024 * 1024
@@ -52,44 +56,49 @@ def compress_file(file_path):
         return compressed_path
     return file_path
 
-def upload_files(directory, tags=None):
+
+def upload_files(directory: str, tags=None):
     try:
         session = get_session()
     except Exception as e:
         print(str(e))
         return
-    
+
     # Validate and process tags
     processed_tags = []
     if tags:
         for tag_str in tags:
-            if ':' in tag_str:
-                key, value = tag_str.split(':', 1)
+            if ":" in tag_str:
+                key, value = tag_str.split(":", 1)
             else:
                 key = tag_str
-                value = 'true'
+                value = "true"
             key = key.strip()
             value = value.strip()
 
-            # Validate tag key
             if not TAG_KEY_PATTERN.fullmatch(key):
-                print(f"Invalid tag key '{key}'. Must start with a letter, and be 1-50 characters long. Allowed characters: letters, numbers, '_', '-', '.'")
+                print(
+                    f"Invalid tag key '{key}'. Must start with a letter, and be 1-50 characters long. Allowed characters: letters, numbers, '_', '-', '.'"
+                )
                 continue
 
-            # Validate tag value
             if not TAG_VALUE_PATTERN.fullmatch(value):
-                print(f"Invalid tag value '{value}'. Must be 1-100 characters long. Allowed characters: letters, numbers, spaces, '_', '-', '.', '/'")
+                print(
+                    f"Invalid tag value '{value}'. Must be 1-100 characters long. Allowed characters: letters, numbers, spaces, '_', '-', '.', '/'"
+                )
                 continue
 
             processed_tags.append(f"{key}:{value}")
 
-    # Placeholder run data
+    files_to_upload, stats = find_robot_files(directory)
+
+    # Prepare run data
     run_data = {
-        "total_tests": None,
-        "passed": None,
-        "failed": None,
-        "skipped": None,
-        "verdict": None,
+        "total_tests": stats.get("total_tests"),
+        "passed": stats.get("passed"),
+        "failed": stats.get("failed"),
+        "skipped": stats.get("skipped"),
+        "verdict": stats.get("verdict"),
         "tags": processed_tags,
     }
 
@@ -101,7 +110,6 @@ def upload_files(directory, tags=None):
 
     run_id = response.json()["run_id"]
     upload_url = f"{BASE_URL}/api/runs/{run_id}/upload"
-    files_to_upload = find_robot_files(directory)
 
     if not files_to_upload:
         print(f"No Robot Framework test results found in {directory}")
@@ -129,8 +137,9 @@ def upload_files(directory, tags=None):
             sys.stdout.flush()
 
         with open(file_to_upload, "rb") as file:
+            file_to_upload_name = os.path.relpath(file_to_upload, start=directory)
             # Send the file_name including subdirectory structure
-            files = {"file": (file_name, file)}
+            files = {"file": (file_to_upload_name, file)}
             response = session.post(upload_url, files=files)
 
         if response.status_code == 200:
@@ -139,10 +148,12 @@ def upload_files(directory, tags=None):
             sys.stdout.write(" [OK]\n")
 
             if file_name.lower().endswith(".html"):
-                html_files.append({
-                    "label": os.path.basename(file_name).capitalize()[:-5],
-                    "url": f"{BASE_URL}{upload_response['file_url']}"
-                })
+                html_files.append(
+                    {
+                        "label": os.path.basename(file_name).capitalize()[:-5],
+                        "url": f"{BASE_URL}{upload_response['file_url']}",
+                    }
+                )
         else:
             sys.stdout.write(" [FAIL]\n")
             print(f"Error uploading {file_name}: {response.text}")
@@ -169,8 +180,8 @@ def upload_files(directory, tags=None):
         if html_files:
             print("\nHTML Files:")
             for html_file in html_files:
-                label = html_file['label']+":"
-                url = html_file['url']
+                label = html_file["label"] + ":"
+                url = html_file["url"]
                 print(f"  {label:<10} {url}")
         print(f"  Run:       {run_url}")
 
@@ -179,19 +190,24 @@ def upload_files(directory, tags=None):
             # Write to GitHub Actions summary
             with open(github_step_summary, "a") as summary_file:
                 # Build the list of available links
-                links = [f"[{html_file['label']}]({html_file['url']})" for html_file in html_files]
+                links = [
+                    f"[{html_file['label']}]({html_file['url']})"
+                    for html_file in html_files
+                ]
                 if not links:
                     # No HTML files; provide Run link
                     links.append(f"[Results]({run_url})")
 
                 # Write the links on the same line
-                summary_file.write(' '.join(links) + '\n')
+                summary_file.write(" ".join(links) + "\n")
             print("\nUploaded results have been added to the GitHub Actions summary.")
     else:
         print("\nUpload failed. Some files were not uploaded successfully.")
 
-def find_robot_files(directory):
+
+def find_robot_files(directory: str) -> Tuple[List[str], Dict[str, Any]]:
     robot_files = []
+    stats = {}
     standard_files = ["log.html", "report.html", "output.xml"]
     for filename in os.listdir(directory):
         if filename in standard_files:
@@ -200,12 +216,12 @@ def find_robot_files(directory):
     # Parse output.xml to find additional files
     output_xml_path = os.path.join(directory, "output.xml")
 
-    additional_files = set()
     if os.path.exists(output_xml_path):
-        additional_files.update(parse_output_xml(output_xml_path, directory))
+        additional_files, stats = parse_output_xml(output_xml_path, directory)
 
     robot_files.extend(list(additional_files))
-    return robot_files
+    return robot_files, stats
+
 
 class MsgHTMLParser(HTMLParser):
     def __init__(self):
@@ -217,35 +233,56 @@ class MsgHTMLParser(HTMLParser):
             if attr_name in ["src", "href"]:
                 self.file_paths.append(attr_value)
 
-def parse_output_xml(output_xml_path, base_directory):
-    # Efficiently parse output.xml
-    additional_files = set()
-    base_directory = os.path.abspath(base_directory)  # Get absolute path of base directory
 
-    context = ET.iterparse(output_xml_path, events=("end",))
+def parse_output_xml(
+    output_xml_path: str, base_directory: str
+) -> Tuple[Set[str], Dict[str, Any]]:
+    additional_files: Set[str] = set()
+    base_directory = os.path.abspath(base_directory)
+    stats = {"total_tests": 0, "passed": 0, "failed": 0, "skipped": 0, "verdict": None}
+
+    context = ET.iterparse(output_xml_path, events=("start", "end"))
+    inside_statistics = False
+
     for event, elem in context:
-        if elem.tag == "msg" and elem.get("html") == "true":
+        if event == "start" and elem.tag == "statistics":
+            inside_statistics = True
+        if event != "end":
+            continue
+        if elem.tag == "statistics":
+            inside_statistics = False
+        elif inside_statistics and elem.tag == "total":
+            for stat in elem.findall("stat"):
+                if stat.text == "All Tests":
+                    stats["total_tests"] = (
+                        int(stat.get("pass", 0))
+                        + int(stat.get("fail", 0))
+                        + int(stat.get("skip", 0))
+                    )
+                    stats["passed"] = int(stat.get("pass", 0))
+                    stats["failed"] = int(stat.get("fail", 0))
+                    stats["skipped"] = int(stat.get("skip", 0))
+                    break
+        elif elem.tag == "msg" and elem.get("html") == "true":
             html_content = elem.text or ""
             parser = MsgHTMLParser()
             parser.feed(html_content)
             for file_path in parser.file_paths:
-                # Resolve the file path relative to base_directory
                 resolved_path = os.path.join(base_directory, file_path)
-                # Normalize the path to handle any .. or .
                 resolved_path = os.path.normpath(resolved_path)
-                # Get absolute path
                 resolved_path = os.path.abspath(resolved_path)
-                # Check if the resolved path is within the base_directory
-                if os.path.commonprefix([resolved_path, base_directory]) == base_directory:
-                    # Check if the file exists
+                if (
+                    os.path.commonprefix([resolved_path, base_directory])
+                    == base_directory
+                ):
                     if os.path.isfile(resolved_path):
                         additional_files.add(resolved_path)
-                else:
-                    # The file is outside the base_directory; ignore it
-                    pass
-        # Clear the element to free memory
+
         elem.clear()
-    return additional_files
+
+    stats["verdict"] = "pass" if stats["failed"] == 0 else "fail"
+    return additional_files, stats
+
 
 def get_run_info(run_id):
     try:
@@ -262,6 +299,7 @@ def get_run_info(run_id):
         print(f"Failed to retrieve run info: {response.status_code}")
         print(f"Response content: {response.text}")
         return None
+
 
 def list_runs():
     try:
@@ -280,6 +318,7 @@ def list_runs():
     else:
         print(f"Failed to retrieve runs: {response.status_code}")
         print(f"Response content: {response.text}")
+
 
 def download_files(run_id, output_dir):
     try:
@@ -314,6 +353,7 @@ def download_files(run_id, output_dir):
             print(f"Failed to download {file_name}: {response.status_code}")
             print(f"Response content: {response.text}")
 
+
 def delete_run(run_id):
     try:
         session = get_session()
@@ -332,32 +372,46 @@ def delete_run(run_id):
         print(f"Failed to delete run {run_id}: {response.status_code}")
         print(f"Response content: {response.text}")
 
+
 def main():
     parser = argparse.ArgumentParser(
         description=f"RF Logs CLI v{__version__} - A tool for managing Robot Framework test results with rflogs.io",
-        epilog="For more information, visit https://rflogs.io"
+        epilog="For more information, visit https://rflogs.io",
     )
-    parser.add_argument('-v', '--version', action='version', version=f'%(prog)s {__version__}')
+    parser.add_argument(
+        "-v", "--version", action="version", version=f"%(prog)s {__version__}"
+    )
     subparsers = parser.add_subparsers(dest="action", required=True)
 
-    upload_parser = subparsers.add_parser("upload", help="Upload test results to rflogs.io")
+    upload_parser = subparsers.add_parser(
+        "upload", help="Upload test results to rflogs.io"
+    )
     upload_parser.add_argument(
-        "-t", "--tag", action="append", help="Tag(s) to associate with the run, e.g., -t env:windows -t regression"
+        "-t",
+        "--tag",
+        action="append",
+        help="Tag(s) to associate with the run, e.g., -t env:windows -t regression",
     )
     upload_parser.add_argument(
         "directory", nargs="?", default=".", help="Directory containing test results"
     )
 
-    info_parser = subparsers.add_parser("info", help="Get run information from rflogs.io")
+    info_parser = subparsers.add_parser(
+        "info", help="Get run information from rflogs.io"
+    )
     info_parser.add_argument("run_id", help="Run ID to get information for")
 
-    download_parser = subparsers.add_parser("download", help="Download test results from rflogs.io")
+    download_parser = subparsers.add_parser(
+        "download", help="Download test results from rflogs.io"
+    )
     download_parser.add_argument("run_id", help="Run ID to download")
     download_parser.add_argument(
         "--output-dir", default=".", help="Directory to save downloaded files"
     )
 
-    delete_parser = subparsers.add_parser("delete", help="Delete a specific run from rflogs.io")
+    delete_parser = subparsers.add_parser(
+        "delete", help="Delete a specific run from rflogs.io"
+    )
     delete_parser.add_argument("run_id", help="Run ID to delete")
 
     subparsers.add_parser("list", help="List available runs on rflogs.io")
@@ -371,7 +425,7 @@ def main():
         if info:
             print(f"Run ID: {args.run_id}")
             print(f"Files: {len(info['files'])}")
-            for file in info['files']:
+            for file in info["files"]:
                 print(f"  - {file['name']} (ID: {file['id']})")
     elif args.action == "download":
         download_files(args.run_id, args.output_dir)
@@ -379,6 +433,7 @@ def main():
         list_runs()
     elif args.action == "delete":
         delete_run(args.run_id)
+
 
 if __name__ == "__main__":
     main()
