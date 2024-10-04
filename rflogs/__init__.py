@@ -234,51 +234,45 @@ class MsgHTMLParser(HTMLParser):
                 self.file_paths.append(attr_value)
 
 
-def parse_output_xml(
-    output_xml_path: str, base_directory: str
-) -> Tuple[Set[str], Dict[str, Any]]:
+def parse_output_xml(output_xml_path: str, base_directory: str) -> Tuple[Set[str], Dict[str, Any]]:
     additional_files: Set[str] = set()
     base_directory = os.path.abspath(base_directory)
     stats = {"total_tests": 0, "passed": 0, "failed": 0, "skipped": 0, "verdict": None}
 
     context = ET.iterparse(output_xml_path, events=("start", "end"))
     inside_statistics = False
+    inside_total = False
 
     for event, elem in context:
-        if event == "start" and elem.tag == "statistics":
-            inside_statistics = True
-        if event != "end":
-            continue
-        if elem.tag == "statistics":
-            inside_statistics = False
-        elif inside_statistics and elem.tag == "total":
-            for stat in elem.findall("stat"):
-                if stat.text == "All Tests":
-                    stats["total_tests"] = (
-                        int(stat.get("pass", 0))
-                        + int(stat.get("fail", 0))
-                        + int(stat.get("skip", 0))
-                    )
-                    stats["passed"] = int(stat.get("pass", 0))
-                    stats["failed"] = int(stat.get("fail", 0))
-                    stats["skipped"] = int(stat.get("skip", 0))
-                    break
-        elif elem.tag == "msg" and elem.get("html") == "true":
-            html_content = elem.text or ""
-            parser = MsgHTMLParser()
-            parser.feed(html_content)
-            for file_path in parser.file_paths:
-                resolved_path = os.path.join(base_directory, file_path)
-                resolved_path = os.path.normpath(resolved_path)
-                resolved_path = os.path.abspath(resolved_path)
-                if (
-                    os.path.commonprefix([resolved_path, base_directory])
-                    == base_directory
-                ):
-                    if os.path.isfile(resolved_path):
-                        additional_files.add(resolved_path)
-
-        elem.clear()
+        if event == "start":
+            if elem.tag == "statistics":
+                inside_statistics = True
+            elif inside_statistics and elem.tag == "total":
+                inside_total = True
+        elif event == "end":
+            if elem.tag == "statistics":
+                inside_statistics = False
+            elif inside_statistics and elem.tag == "total":
+                inside_total = False
+            elif inside_total and elem.tag == "stat":
+                if elem.text == "All Tests":
+                    print("Processing 'All Tests' stat")
+                    stats["total_tests"] = int(elem.attrib.get("pass", 0)) + int(elem.attrib.get("fail", 0)) + int(elem.attrib.get("skip", 0))
+                    stats["passed"] = int(elem.attrib.get("pass", 0))
+                    stats["failed"] = int(elem.attrib.get("fail", 0))
+                    stats["skipped"] = int(elem.attrib.get("skip", 0))
+            elif elem.tag == "msg" and elem.get("html") == "true":
+                html_content = elem.text or ""
+                parser = MsgHTMLParser()
+                parser.feed(html_content)
+                for file_path in parser.file_paths:
+                    resolved_path = os.path.join(base_directory, file_path)
+                    resolved_path = os.path.normpath(resolved_path)
+                    resolved_path = os.path.abspath(resolved_path)
+                    if os.path.commonprefix([resolved_path, base_directory]) == base_directory:
+                        if os.path.isfile(resolved_path):
+                            additional_files.add(resolved_path)
+            elem.clear()
 
     stats["verdict"] = "pass" if stats["failed"] == 0 else "fail"
     return additional_files, stats
