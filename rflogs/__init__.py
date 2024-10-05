@@ -218,8 +218,8 @@ def find_robot_files(directory: str) -> Tuple[List[str], Dict[str, Any]]:
 
     if os.path.exists(output_xml_path):
         additional_files, stats = parse_output_xml(output_xml_path, directory)
+        robot_files.extend(list(additional_files))
 
-    robot_files.extend(list(additional_files))
     return robot_files, stats
 
 
