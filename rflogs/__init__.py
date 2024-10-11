@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import gzip
 from html.parser import HTMLParser
 import os
@@ -237,11 +238,21 @@ class MsgHTMLParser(HTMLParser):
 def parse_output_xml(output_xml_path: str, base_directory: str) -> Tuple[Set[str], Dict[str, Any]]:
     additional_files: Set[str] = set()
     base_directory = os.path.abspath(base_directory)
-    stats = {"total_tests": 0, "passed": 0, "failed": 0, "skipped": 0, "verdict": None}
+    stats = {
+        "total_tests": 0,
+        "passed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "verdict": None,
+        "start_time": None,
+        "end_time": None,
+    }
 
     context = ET.iterparse(output_xml_path, events=("start", "end"))
     inside_statistics = False
     inside_total = False
+    start_time_str = None
+    elapsed_time = 0
 
     for event, elem in context:
         if event == "start":
@@ -250,7 +261,10 @@ def parse_output_xml(output_xml_path: str, base_directory: str) -> Tuple[Set[str
             elif inside_statistics and elem.tag == "total":
                 inside_total = True
         elif event == "end":
-            if elem.tag == "statistics":
+            if elem.tag == "status":
+                start_time_str = elem.get("start")
+                elapsed_time = float(elem.get("elapsed", 0))
+            elif elem.tag == "statistics":
                 inside_statistics = False
             elif inside_statistics and elem.tag == "total":
                 inside_total = False
@@ -274,6 +288,11 @@ def parse_output_xml(output_xml_path: str, base_directory: str) -> Tuple[Set[str
                             additional_files.add(resolved_path)
             elem.clear()
 
+    # Last status element times are suite times.
+    if start_time_str:
+        stats["start_time"] = datetime.datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
+        end_time = stats["start_time"] + datetime.timedelta(seconds=elapsed_time)
+        stats["end_time"] = end_time
     stats["verdict"] = "pass" if stats["failed"] == 0 else "fail"
     return additional_files, stats
 
