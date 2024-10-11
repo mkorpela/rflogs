@@ -100,6 +100,8 @@ def upload_files(directory: str, tags=None):
         "failed": stats.get("failed"),
         "skipped": stats.get("skipped"),
         "verdict": stats.get("verdict"),
+        "start_time": stats.get("start_time").isoformat() if stats.get("start_time") else None,
+        "end_time": stats.get("end_time").isoformat() if stats.get("end_time") else None,
         "tags": processed_tags,
     }
 
