@@ -58,12 +58,12 @@ def compress_file(file_path: str) -> str:
     return file_path
 
 
-def upload_files(directory: str, tags=None):
+def upload_files(directory: str, tags=None, output="output.xml", log="log.html", report="report.html") -> bool:
     try:
         session = get_session()
     except Exception as e:
         print(str(e))
-        return
+        return False
 
     # Validate and process tags
     processed_tags = []
@@ -91,7 +91,11 @@ def upload_files(directory: str, tags=None):
 
             processed_tags.append(f"{key}:{value}")
 
-    files_to_upload, stats = find_robot_files(directory)
+    files_to_upload, stats = find_robot_files(directory, output, log, report)
+
+    if not files_to_upload:
+        print(f"Error: No Robot Framework test results found in {directory} with the specified filenames.")
+        return False
 
     # Prepare run data
     run_data = {
@@ -109,14 +113,10 @@ def upload_files(directory: str, tags=None):
     response = session.post(create_run_url, json=run_data)
     if response.status_code != 200:
         print(f"Error creating run: {response.text}")
-        return
+        return False
 
     run_id = response.json()["run_id"]
     upload_url = f"{BASE_URL}/api/runs/{run_id}/upload"
-
-    if not files_to_upload:
-        print(f"No Robot Framework test results found in {directory}")
-        return
 
     print("Uploading results")
 
@@ -204,24 +204,32 @@ def upload_files(directory: str, tags=None):
                 # Write the links on the same line
                 summary_file.write(" ".join(links) + "\n")
             print("\nUploaded results have been added to the GitHub Actions summary.")
+        return True
     else:
         print("\nUpload failed. Some files were not uploaded successfully.")
+        return False
 
 
-def find_robot_files(directory: str) -> Tuple[List[str], Dict[str, Any]]:
+def find_robot_files(directory: str, output: str, log: str, report: str) -> Tuple[List[str], Dict[str, Any]]:
     robot_files = []
     stats = {}
-    standard_files = ["log.html", "report.html", "output.xml"]
-    for filename in os.listdir(directory):
-        if filename in standard_files:
-            robot_files.append(os.path.join(directory, filename))
-
-    # Parse output.xml to find additional files
-    output_xml_path = os.path.join(directory, "output.xml")
-
-    if os.path.exists(output_xml_path):
-        additional_files, stats = parse_output_xml(output_xml_path, directory)
-        robot_files.extend(list(additional_files))
+    
+    if output.upper() != "NONE":
+        output_path = os.path.join(directory, output)
+        if os.path.exists(output_path):
+            robot_files.append(output_path)
+            additional_files, stats = parse_output_xml(output_path, directory)
+            robot_files.extend(list(additional_files))
+    
+    if log.upper() != "NONE":
+        log_path = os.path.join(directory, log)
+        if os.path.exists(log_path):
+            robot_files.append(log_path)
+    
+    if report.upper() != "NONE":
+        report_path = os.path.join(directory, report)
+        if os.path.exists(report_path):
+            robot_files.append(report_path)
 
     return robot_files, stats
 
@@ -321,7 +329,7 @@ def list_runs():
         session = get_session()
     except Exception as e:
         print(str(e))
-        return
+        return False
 
     url = f"{BASE_URL}/api/runs"
     response = session.get(url)
@@ -330,9 +338,11 @@ def list_runs():
         print("Available runs:")
         for run_id in runs:
             print(f"  {run_id}")
+        return True
     else:
         print(f"Failed to retrieve runs: {response.status_code}")
         print(f"Response content: {response.text}")
+        return False
 
 
 def download_files(run_id, output_dir):
@@ -340,7 +350,7 @@ def download_files(run_id, output_dir):
         session = get_session()
     except Exception as e:
         print(str(e))
-        return
+        return False
 
     # Get run information
     run_info_url = urljoin(BASE_URL, f"/api/runs/{run_id}")
@@ -348,11 +358,16 @@ def download_files(run_id, output_dir):
     if response.status_code != 200:
         print(f"Failed to retrieve run info: {response.status_code}")
         print(f"Response content: {response.text}")
-        return
+        return False
 
     run_info = response.json()
     files = run_info.get("files", [])
 
+    if not files:
+        print(f"No files found for run ID: {run_id}")
+        return False
+
+    success = True
     for file in files:
         file_name = file["name"]
         file_path = file["path"]
@@ -367,6 +382,9 @@ def download_files(run_id, output_dir):
         else:
             print(f"Failed to download {file_name}: {response.status_code}")
             print(f"Response content: {response.text}")
+            success = False
+
+    return success
 
 
 def delete_run(run_id):
@@ -374,18 +392,21 @@ def delete_run(run_id):
         session = get_session()
     except Exception as e:
         print(str(e))
-        return
+        return False
 
     delete_url = f"{BASE_URL}/api/runs/{run_id}"
     response = session.delete(delete_url)
 
     if response.status_code == 200:
         print(f"Run {run_id} deleted successfully.")
+        return True
     elif response.status_code == 404:
         print(f"Run {run_id} not found or you are not authorized to delete it.")
+        return False
     else:
         print(f"Failed to delete run {run_id}: {response.status_code}")
         print(f"Response content: {response.text}")
+        return False
 
 
 def main():
@@ -406,6 +427,21 @@ def main():
         "--tag",
         action="append",
         help="Tag(s) to associate with the run, e.g., -t env:windows -t regression",
+    )
+    upload_parser.add_argument(
+        "-o", "--output",
+        default="output.xml",
+        help="XML output file. Use NONE to disable upload. Default: output.xml"
+    )
+    upload_parser.add_argument(
+        "-l", "--log",
+        default="log.html",
+        help="HTML log file. Use NONE to disable upload. Default: log.html"
+    )
+    upload_parser.add_argument(
+        "-r", "--report",
+        default="report.html",
+        help="HTML report file. Use NONE to disable upload. Default: report.html"
     )
     upload_parser.add_argument(
         "directory", nargs="?", default=".", help="Directory containing test results"
@@ -434,20 +470,32 @@ def main():
     args = parser.parse_args()
 
     if args.action == "upload":
-        upload_files(args.directory, tags=args.tag)
+        success = upload_files(args.directory, tags=args.tag, output=args.output, log=args.log, report=args.report)
+        if not success:
+            sys.exit(1)
     elif args.action == "info":
         info = get_run_info(args.run_id)
         if info:
             print(f"Run ID: {args.run_id}")
             print(f"Files: {len(info['files'])}")
-            for file in info["files"]:
+            for file in info['files']:
                 print(f"  - {file['name']} (ID: {file['id']})")
+        else:
+            sys.exit(1)
     elif args.action == "download":
-        download_files(args.run_id, args.output_dir)
+        success = download_files(args.run_id, args.output_dir)
+        if not success:
+            sys.exit(1)
     elif args.action == "list":
-        list_runs()
+        success = list_runs()
+        if not success:
+            sys.exit(1)
     elif args.action == "delete":
-        delete_run(args.run_id)
+        success = delete_run(args.run_id)
+        if not success:
+            sys.exit(1)
+    
+    sys.exit(0)
 
 
 if __name__ == "__main__":
