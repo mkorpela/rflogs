@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 5.0.1 (Python 3.9.5 on linux)" generated="20230101 12:00:00.000" rpa="false" schemaversion="3">
+<suite id="s1" name="Test">
+<test id="s1-t1" name="Example Test">
+<status status="PASS" starttime="20230101 12:00:00.000" endtime="20230101 12:00:01.000"/>
+</test>
+<status status="PASS" starttime="20230101 12:00:00.000" endtime="20230101 12:00:01.000"/>
+</suite>
+<statistics>
+<total>
+<stat pass="1" fail="0" skip="0">All Tests</stat>
+</total>
+</statistics>
+</robot>
