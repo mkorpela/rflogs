@@ -1,3 +1,4 @@
+import os
 import pytest
 from rflogs import parse_output_xml
 import xml.etree.ElementTree as ET
@@ -100,8 +101,32 @@ def test_parse_output_xml_with_video_msg():
     assert stats["end_time"] == datetime.datetime(2024, 10, 11, 10, 34, 51, 652133)
 
 def test_parse_real_output_xml():
-    additional_files, stats = parse_output_xml("tests/output.xml", "tests")
-    #assert additional_files == {"/test/dir/video/0-73a067fbe34b2b5cf7d977739ae2bf76.webm"}
+    output_xml_path = os.path.abspath(os.path.join("tests", "data", "output.xml"))
+    base_directory = os.path.dirname(output_xml_path)
+    
+    additional_files, stats = parse_output_xml(output_xml_path, base_directory)
+    
     assert stats["verdict"] == "pass"
-    assert stats["start_time"] == datetime.datetime(2024, 10, 11, 10, 34, 16, 300573)
-    assert stats["end_time"] == datetime.datetime(2024, 10, 11, 10, 35, 25, 142151)
+    assert isinstance(stats["start_time"], datetime.datetime)
+    assert isinstance(stats["end_time"], datetime.datetime)
+    assert stats["start_time"] < stats["end_time"]
+    
+    # Check for screenshots using absolute paths
+    expected_screenshots = [
+        os.path.abspath(os.path.join(base_directory, "rflogs_selenium.png")),
+        os.path.abspath(os.path.join(base_directory, "browser", "screenshot", "rflogs_browser.png"))
+    ]
+    
+    for screenshot in expected_screenshots:
+        assert screenshot in additional_files, f"Screenshot {screenshot} not found in additional files"
+    
+    # Check other stats
+    assert stats["total_tests"] > 0
+    assert stats["passed"] > 0
+    assert stats["failed"] == 0
+    assert stats["skipped"] == 0
+
+    # Print additional debug information
+    print("Base directory:", base_directory)
+    print("Expected screenshots:", expected_screenshots)
+    print("Additional files:", additional_files)

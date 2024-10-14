@@ -1,0 +1,51 @@
+{"level":30,"time":"2024-10-14T08:38:20.336Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"Listening on 49565"}
+(node:3471) DeprecationWarning: Calling start() is no longer necessary. It can be safely omitted.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+{"level":30,"time":"2024-10-14T08:38:21.368Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"Start of node method newBrowser"}
+{"level":30,"time":"2024-10-14T08:38:22.255Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"Adding browser to stack: chromium, version: 130.0.6723.31"}
+{"level":30,"time":"2024-10-14T08:38:22.256Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"End of node method newBrowser"}
+{"level":30,"time":"2024-10-14T08:38:22.255Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"Adding 0 contexts to browser"}
+{"level":30,"time":"2024-10-14T08:38:22.262Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"currentBrowser: [object Object]"}
+{"level":30,"time":"2024-10-14T08:38:22.262Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"Start of node method newPage"}
+{"level":30,"time":"2024-10-14T08:38:22.282Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"Changed active context"}
+{"level":30,"time":"2024-10-14T08:38:23.084Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"Video path: undefined"}
+{"level":30,"time":"2024-10-14T08:38:23.084Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"Changed active page"}
+{"level":30,"time":"2024-10-14T08:38:23.503Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"End of node method newPage"}
+{"level":30,"time":"2024-10-14T08:38:23.510Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"Start of node method takeScreenshot"}
+{"level":30,"time":"2024-10-14T08:38:23.510Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","Take screenshot with options: ":{"path":"/Users/mkorpela/workspace/rflogs/tests/data/browser/screenshot/rflogs_browser.png","fileType":"png","fullPage":true,"timeout":10000,"omitBackground":false}}
+{"level":30,"time":"2024-10-14T08:38:23.700Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"End of node method takeScreenshot"}
+{"level":30,"time":"2024-10-14T08:38:23.704Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"Start of node method closeBrowser"}
+{"level":30,"time":"2024-10-14T08:38:23.721Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"Removed page=67ab0470-ab18-4085-bd8f-7a98912b6f05 from context=4153a67c-4441-410c-836a-c95185c0057b page stack"}
+{"level":30,"time":"2024-10-14T08:38:23.931Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"End of node method closeBrowser"}
+================= Original suppressed error =================
+Error: Browser has been closed.
+    at PlaywrightState.getActiveBrowser (/Users/mkorpela/workspace/rflogs/tests/data/.venv/lib/python3.11/site-packages/Browser/wrapper/index.js:10982:15)
+    at PlaywrightServer.getActiveBrowser (/Users/mkorpela/workspace/rflogs/tests/data/.venv/lib/python3.11/site-packages/Browser/wrapper/index.js:11598:59)
+    at PlaywrightServer.setTimeout (/Users/mkorpela/workspace/rflogs/tests/data/.venv/lib/python3.11/site-packages/Browser/wrapper/index.js:11837:57)
+    at Object.onReceiveHalfClose (/Users/mkorpela/workspace/rflogs/tests/data/.venv/lib/python3.11/site-packages/Browser/wrapper/node_modules/@grpc/grpc-js/build/src/server.js:1425:25)
+    at BaseServerInterceptingCall.maybePushNextMessage (/Users/mkorpela/workspace/rflogs/tests/data/.venv/lib/python3.11/site-packages/Browser/wrapper/node_modules/@grpc/grpc-js/build/src/server-interceptors.js:569:31)
+    at BaseServerInterceptingCall.handleEndEvent (/Users/mkorpela/workspace/rflogs/tests/data/.venv/lib/python3.11/site-packages/Browser/wrapper/node_modules/@grpc/grpc-js/build/src/server-interceptors.js:609:14)
+    at ServerHttp2Stream.<anonymous> (/Users/mkorpela/workspace/rflogs/tests/data/.venv/lib/python3.11/site-packages/Browser/wrapper/node_modules/@grpc/grpc-js/build/src/server-interceptors.js:376:18)
+    at ServerHttp2Stream.emit (node:events:525:35)
+    at endReadableNT (node:internal/streams/readable:1359:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
+=============================================================
+{"level":30,"time":"2024-10-14T08:38:23.939Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"Start of node method getBrowserCatalog"}
+{"level":30,"time":"2024-10-14T08:38:23.940Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"End of node method getBrowserCatalog"}
+================= Original suppressed error =================
+Error: Browser has been closed.
+    at PlaywrightState.getActiveBrowser (/Users/mkorpela/workspace/rflogs/tests/data/.venv/lib/python3.11/site-packages/Browser/wrapper/index.js:10982:15)
+    at PlaywrightServer.getActiveBrowser (/Users/mkorpela/workspace/rflogs/tests/data/.venv/lib/python3.11/site-packages/Browser/wrapper/index.js:11598:59)
+    at PlaywrightServer.setTimeout (/Users/mkorpela/workspace/rflogs/tests/data/.venv/lib/python3.11/site-packages/Browser/wrapper/index.js:11837:57)
+    at Object.onReceiveHalfClose (/Users/mkorpela/workspace/rflogs/tests/data/.venv/lib/python3.11/site-packages/Browser/wrapper/node_modules/@grpc/grpc-js/build/src/server.js:1425:25)
+    at BaseServerInterceptingCall.maybePushNextMessage (/Users/mkorpela/workspace/rflogs/tests/data/.venv/lib/python3.11/site-packages/Browser/wrapper/node_modules/@grpc/grpc-js/build/src/server-interceptors.js:569:31)
+    at BaseServerInterceptingCall.handleEndEvent (/Users/mkorpela/workspace/rflogs/tests/data/.venv/lib/python3.11/site-packages/Browser/wrapper/node_modules/@grpc/grpc-js/build/src/server-interceptors.js:609:14)
+    at ServerHttp2Stream.<anonymous> (/Users/mkorpela/workspace/rflogs/tests/data/.venv/lib/python3.11/site-packages/Browser/wrapper/node_modules/@grpc/grpc-js/build/src/server-interceptors.js:376:18)
+    at ServerHttp2Stream.emit (node:events:525:35)
+    at endReadableNT (node:internal/streams/readable:1359:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
+=============================================================
+{"level":30,"time":"2024-10-14T08:38:23.946Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"Start of node method getBrowserCatalog"}
+{"level":30,"time":"2024-10-14T08:38:23.946Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"End of node method getBrowserCatalog"}
+{"level":30,"time":"2024-10-14T08:38:27.438Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"Start of node method closeAllBrowsers"}
+{"level":30,"time":"2024-10-14T08:38:27.438Z","pid":3471,"hostname":"Mikko-MacBook-Pro.local","msg":"End of node method closeAllBrowsers"}

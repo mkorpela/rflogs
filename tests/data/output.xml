@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 7.1 (Python 3.11.7 on darwin)" generated="2024-10-14T11:38:19.531109" rpa="false" schemaversion="5">
+<suite id="s1" name="Data" source="/Users/mkorpela/workspace/rflogs/tests/data">
+<suite id="s1-s1" name="Browser Lib Test" source="/Users/mkorpela/workspace/rflogs/tests/data/browser_lib_test.robot">
+<test id="s1-s1-t1" name="Capture Screenshot of RF Logs Website" line="5">
+<kw name="New Browser" owner="Browser">
+<msg time="2024-10-14T11:38:19.752547" level="INFO">{"browser": "chromium", "headless": false, "chromiumSandbox": false, "devtools": false, "handleSIGHUP": true, "handleSIGINT": true, "handleSIGTERM": true, "slowMo": 0.0, "timeout": 30000.0, "tracesDir": "/Users/mkorpela/workspace/rflogs/tests/data/browser/traces/dbbdf536-476e-4a54-922e-bb5ba7964ab2"}</msg>
+<msg time="2024-10-14T11:38:19.807729" level="INFO">Starting Browser process /Users/mkorpela/workspace/rflogs/tests/data/.venv/lib/python3.11/site-packages/Browser/wrapper/index.js using port 49565</msg>
+<msg time="2024-10-14T11:38:19.808039" level="INFO">Node startup parameters: ['node', '/Users/mkorpela/workspace/rflogs/tests/data/.venv/lib/python3.11/site-packages/Browser/wrapper/index.js', '49565']</msg>
+<msg time="2024-10-14T11:38:22.257384" level="INFO">Successfully created browser with options: {"browser":"chromium","headless":false,"chromiumSandbox":false,"devtools":false,"handleSIGHUP":true,"handleSIGINT":true,"handleSIGTERM":true,"slowMo":0,"timeout":30000,"tracesDir":"/Users/mkorpela/workspace/rflogs/tests/data/browser/traces/dbbdf536-476e-4a54-922e-bb5ba7964ab2"}</msg>
+<arg>chromium</arg>
+<arg>headless=False</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new playwright Browser with specified options.</doc>
+<status status="PASS" start="2024-10-14T11:38:19.751642" elapsed="2.506162"/>
+</kw>
+<kw name="New Page" owner="Browser">
+<msg time="2024-10-14T11:38:23.505481" level="INFO">Successfully initialized new page object and opened url: https://rflogs.io</msg>
+<msg time="2024-10-14T11:38:23.505577" level="INFO">No context was open. New context was automatically opened when this page is created.</msg>
+<arg>https://rflogs.io</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Open a new Page.</doc>
+<status status="PASS" start="2024-10-14T11:38:22.258712" elapsed="1.247092"/>
+</kw>
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2024-10-14T11:38:23.702037" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="browser/screenshot/rflogs_browser.png" target="_blank"&gt;&lt;img src="browser/screenshot/rflogs_browser.png" width="800px"/&gt;&lt;/a&gt;</msg>
+<arg>fullPage=True</arg>
+<arg>filename=rflogs_browser</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2024-10-14T11:38:23.506190" elapsed="0.196049"/>
+</kw>
+<kw name="Close Browser" owner="Browser">
+<msg time="2024-10-14T11:38:23.932179" level="INFO">Closed browser</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes the current browser.</doc>
+<status status="PASS" start="2024-10-14T11:38:23.702582" elapsed="0.229810"/>
+</kw>
+<status status="PASS" start="2024-10-14T11:38:19.750386" elapsed="4.182381"/>
+</test>
+<status status="PASS" start="2024-10-14T11:38:19.561785" elapsed="4.380312"/>
+</suite>
+<suite id="s1-s2" name="Selenium Lib Test" source="/Users/mkorpela/workspace/rflogs/tests/data/selenium_lib_test.robot">
+<test id="s1-s2-t1" name="Capture Screenshot of RF Logs Website" line="5">
+<kw name="Open Browser" owner="SeleniumLibrary">
+<msg time="2024-10-14T11:38:24.158678" level="INFO">Opening browser 'chrome' to base url 'https://rflogs.io'.</msg>
+<arg>https://rflogs.io</arg>
+<arg>chrome</arg>
+<doc>Opens a new browser instance to the optional ``url``.</doc>
+<status status="PASS" start="2024-10-14T11:38:24.158391" elapsed="2.015432"/>
+</kw>
+<kw name="Maximize Browser Window" owner="SeleniumLibrary">
+<doc>Maximizes current browser window.</doc>
+<status status="PASS" start="2024-10-14T11:38:26.174730" elapsed="0.385993"/>
+</kw>
+<kw name="Capture Page Screenshot" owner="SeleniumLibrary">
+<msg time="2024-10-14T11:38:27.287118" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="rflogs_selenium.png"&gt;&lt;img src="rflogs_selenium.png" width="800px"&gt;&lt;/a&gt;</msg>
+<arg>rflogs_selenium.png</arg>
+<doc>Takes a screenshot of the current page and embeds it into a log file.</doc>
+<status status="PASS" start="2024-10-14T11:38:26.561086" elapsed="0.726169"/>
+</kw>
+<kw name="Close Browser" owner="SeleniumLibrary">
+<doc>Closes the current browser.</doc>
+<status status="PASS" start="2024-10-14T11:38:27.287562" elapsed="0.115372"/>
+</kw>
+<status status="PASS" start="2024-10-14T11:38:24.157493" elapsed="3.245920"/>
+</test>
+<status status="PASS" start="2024-10-14T11:38:23.948284" elapsed="3.456062"/>
+</suite>
+<status status="PASS" start="2024-10-14T11:38:19.533033" elapsed="7.872330"/>
+</suite>
+<statistics>
+<total>
+<stat pass="2" fail="0" skip="0">All Tests</stat>
+</total>
+<tag>
+</tag>
+<suite>
+<stat pass="2" fail="0" skip="0" id="s1" name="Data">Data</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s1" name="Browser Lib Test">Data.Browser Lib Test</stat>
+<stat pass="1" fail="0" skip="0" id="s1-s2" name="Selenium Lib Test">Data.Selenium Lib Test</stat>
+</suite>
+</statistics>
+<errors>
+</errors>
+</robot>
