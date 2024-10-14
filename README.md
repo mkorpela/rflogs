@@ -14,6 +14,7 @@ or
 
 ```bash
 pip install rflogs
+```
 
 ## Usage
 
