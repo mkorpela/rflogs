@@ -14,7 +14,6 @@ or
 
 ```bash
 pip install rflogs
-```
 
 ## Usage
 
@@ -27,6 +26,65 @@ export RFLOGS_API_KEY=your_api_key_here
 ```
 
 You can add this line to your shell configuration file (e.g., `.bashrc`, `.zshrc`) to make it permanent.
+Without a valid API key, rflogs commands will not work. Ensure you have set this environment variable before proceeding with any operations.
+
+After setting up your API key and installing rflogs, you can start using the tool. Here are the main commands:
+
+- `rflogs upload`: Upload test results
+- `rflogs list`: List available runs
+- `rflogs info`: Get information about a specific run
+- `rflogs download`: Download test results
+- `rflogs delete`: Delete a specific run
+
+### Uploading Test Results
+
+Upload test results after running your Robot Framework tests:
+
+```bash
+rflogs upload [OPTIONS] [OUTPUTDIR]
+```
+
+- `OUTPUTDIR`: Optional. Specifies the location of the test output files. Default is the current directory.
+- The command does not perform a recursive search.
+
+Options:
+- `-o`, `--output`: Specify the XML output file. Default: output.xml
+- `-l`, `--log`: Specify the HTML log file. Default: log.html
+- `-r`, `--report`: Specify the HTML report file. Default: report.html
+- Use `NONE` as the value to skip uploading a specific file type.
+
+This command will:
+1. Find relevant test result files in the specified directory
+2. Compress output.xml using gzip if it's larger than 1MB
+3. Upload all files to the RF Logs server
+4. Provide a link to view the uploaded results
+
+Example usage:
+
+```bash
+rflogs upload ./results --output custom_output.xml --log custom_log.html --report NONE
+```
+
+Example output:
+
+```
+$ rflogs upload ./results
+Uploading results
+  output.xml    1.20 MB - compressed to 800.00 KB [OK]
+  log.html    256.00 KB [OK]
+  report.html 128.00 KB [OK]
+  screenshot1.png 45.00 KB [OK]
+  screenshot2.png 52.00 KB [OK]
+
+Run ID: 1234abcd
+Files:  5
+Size:   1.28 MB
+
+HTML Files:
+  Log:      https://rflogs.io/files/log.html
+  Report:   https://rflogs.io/files/report.html
+  Run:      https://rflogs.io/run-details.html?runId=1234abcd
+```
 
 ## Tagging Runs
 
@@ -37,164 +95,10 @@ You can associate tags with your test runs to categorize and filter them. Tags c
 - **Key-Value Tags:** `key:value`
 - **Simple Tags:** `tag`
 
-### Constraints
-
-- **Tag Keys:**
-
-  - **Must start with a letter (a-z, A-Z).**
-  - **Length:** 1 to 50 characters.
-  - **Allowed Characters:** Letters, numbers, underscores (`_`), hyphens (`-`), dots (`.`).
-  - **Case-Insensitive:** `Env` and `env` are considered the same key.
-
-- **Tag Values:**
-
-  - **Length:** 1 to 100 characters.
-  - **Allowed Characters:** Letters, numbers, spaces, underscores (`_`), hyphens (`-`), dots (`.`), slashes (`/`).
-  - **Case-Sensitive.**
-
 ### Examples
 
 ```bash
-# Valid Tags
 rflogs upload -t env:production -t browser:chrome -t regression
-
-# Invalid Tag Key (starts with a number)
-rflogs upload -t 1env:production  # Will produce an error
-
-# Invalid Tag Value (contains invalid character '@')
-rflogs upload -t env:prod@ction  # Will produce an error
 ```
 
-### Uploading Test Results
-
-Upload test results after running your Robot Framework tests:
-
-```bash
-rflogs upload [OUTPUTDIR]
-```
-
-- `OUTPUTDIR`: Optional. Specifies the location of the test output files. Default is the current directory.
-- The command does not perform a recursive search.
-
-This command will:
-1. Find relevant test result files (log.html, report.html, output.xml, and screenshots) in the specified directory
-2. Compress output.xml using tar.gz
-3. Upload all files to the RF Logs server
-4. Provide a link to view the uploaded results
-
-Example output:
-
-```
-$ rflogs upload ./results
-Uploading results
-  output.xml    1.20 MB - compressed to 800.00 KB ✓
-  log.html    256.00 KB ✓
-  report.html 128.00 KB ✓
-  screenshot1.png 45.00 KB ✓
-  screenshot2.png 52.00 KB ✓
-
-Run ID: 1234abcd
-Files:  5
-Size:   1.28 MB
-
-Overview: https://rflogs.io/runs/1234abcd
-Log:      https://rflogs.io/runs/1234abcd/log.html
-Report:   https://rflogs.io/runs/1234abcd/report.html
-```
-
-### Listing Uploads
-
-View your recent uploads:
-
-```bash
-rflogs list
-```
-
-Example output:
-
-```
-$ rflogs list
-Available runs:
-  1234abcd
-  5678efgh
-  90ijklmn
-
-To view details of a specific run, use: rflogs info <run_id>
-```
-
-### View Upload Details
-
-Get details about a specific result:
-
-```bash
-rflogs info <run_id>
-```
-
-Example output:
-
-```
-$ rflogs info 1234abcd
-Run ID: 1234abcd
-Files: 5
-  - log.html (ID: 1)
-  - report.html (ID: 2)
-  - output.xml (ID: 3)
-  - screenshot1.png (ID: 4)
-  - screenshot2.png (ID: 5)
-```
-
-### Downloading Test Results
-
-Download test results to your local machine:
-
-```bash
-rflogs download <run_id>
-```
-
-This command downloads all files associated with the specified test result to your current directory.
-
-Example output:
-
-```
-$ rflogs download 1234abcd
-Downloaded log.html
-Downloaded report.html
-Downloaded output.xml
-Downloaded screenshot1.png
-Downloaded screenshot2.png
-```
-
-### Deleting a Test Run
-
-To delete a specific run:
-
-```bash
-rflogs delete <run_id>
-```
-
-This command will immediately delete the specified run and its associated files from the server.
-
-## Integration with CI/CD Systems
-
-### GitHub Actions
-
-To integrate `rflogs` with GitHub Actions, add the following step to your workflow:
-
-```yaml
-- name: Upload Robot Framework results
-  env:
-    RFLOGS_API_KEY: ${{ secrets.RFLOGS_API_KEY }}
-  run: |
-    pipx install rflogs
-    rflogs upload ./results
-```
-
-Make sure to set the `RFLOGS_API_KEY` secret in your GitHub repository settings.
-
-### Other CI/CD Systems
-
-For other CI/CD systems:
-
-1. Install the RF Logs CLI tool in your CI environment
-2. Set the `RFLOGS_API_KEY` environment variable
-3. Run `rflogs upload` with the appropriate output directory
+Tags help in organizing and filtering your test runs on the RF Logs platform.
