@@ -5,6 +5,7 @@ from html.parser import HTMLParser
 import os
 import re
 import sys
+import warnings
 from typing import Any, Dict, List, Set, Tuple
 import xml.etree.ElementTree as ET
 from urllib.parse import urljoin
@@ -33,6 +34,12 @@ def get_session():
         )
     session = requests.Session()
     session.headers.update({"X-API-Key": api_key})
+
+    # Allow disabling SSL verification (with a warning) as a last resort
+    if os.environ.get('RFLOGS_VERIFY_SSL', 'true').lower() == 'false':
+        warnings.warn("SSL certificate verification is disabled. This is insecure and should only be used in trusted environments.")
+        session.verify = False
+
     return session
 
 
@@ -469,31 +476,40 @@ def main():
 
     args = parser.parse_args()
 
-    if args.action == "upload":
-        success = upload_files(args.directory, tags=args.tag, output=args.output, log=args.log, report=args.report)
-        if not success:
-            sys.exit(1)
-    elif args.action == "info":
-        info = get_run_info(args.run_id)
-        if info:
-            print(f"Run ID: {args.run_id}")
-            print(f"Files: {len(info['files'])}")
-            for file in info['files']:
-                print(f"  - {file['name']} (ID: {file['id']})")
-        else:
-            sys.exit(1)
-    elif args.action == "download":
-        success = download_files(args.run_id, args.output_dir)
-        if not success:
-            sys.exit(1)
-    elif args.action == "list":
-        success = list_runs()
-        if not success:
-            sys.exit(1)
-    elif args.action == "delete":
-        success = delete_run(args.run_id)
-        if not success:
-            sys.exit(1)
+    try:
+        if args.action == "upload":
+            success = upload_files(args.directory, tags=args.tag, output=args.output, log=args.log, report=args.report)
+            if not success:
+                sys.exit(1)
+        elif args.action == "info":
+            info = get_run_info(args.run_id)
+            if info:
+                print(f"Run ID: {args.run_id}")
+                print(f"Files: {len(info['files'])}")
+                for file in info['files']:
+                    print(f"  - {file['name']} (ID: {file['id']})")
+            else:
+                sys.exit(1)
+        elif args.action == "download":
+            success = download_files(args.run_id, args.output_dir)
+            if not success:
+                sys.exit(1)
+        elif args.action == "list":
+            success = list_runs()
+            if not success:
+                sys.exit(1)
+        elif args.action == "delete":
+            success = delete_run(args.run_id)
+            if not success:
+                sys.exit(1)
+    except requests.exceptions.SSLError as e:
+        print("SSL Certificate Verification Error:")
+        print(str(e))
+        print("\nTroubleshooting steps:")
+        print("1. Ensure your system's root certificates are up to date.")
+        print("2. If you're behind a corporate firewall, contact your IT department for assistance.")
+        print("3. As a last resort, you can temporarily disable SSL verification (NOT RECOMMENDED) by setting RFLOGS_VERIFY_SSL=false")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
