@@ -143,7 +143,8 @@ def upload_files(directory: str, tags=None, output="output.xml", log="log.html",
             file_to_upload_name = os.path.relpath(file_to_upload, start=directory)
             # Send the file_name including subdirectory structure
             files = {"file": (file_to_upload_name, file)}
-            response = session.post(upload_url, files=files)
+            data = {"is_output_file": "true" if file_name == output else "false"}
+            response = session.post(upload_url, files=files, data=data)
 
         if response.status_code == 200:
             upload_response = response.json()
