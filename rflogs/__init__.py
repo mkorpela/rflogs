@@ -248,7 +248,7 @@ def parse_output_xml(output_xml_path: str, base_directory: str) -> Set[str]:
     additional_files: Set[str] = set()
     base_directory = os.path.abspath(base_directory)
 
-    context = ET.iterparse(output_xml_path, events=("end"))
+    context = ET.iterparse(output_xml_path, events=("end",))
     
     for _, elem in context:
         if elem.tag == "msg" and elem.get("html") == "true":
